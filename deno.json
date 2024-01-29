@@ -1,0 +1,10 @@
+{
+  "tasks": {
+    "tmp": "deno run --allow-read --watch tmp/solve.ts",
+    "day16": "deno run --allow-read --watch day16/solve.ts",
+  },
+  "fmt": {
+    "semiColons": false,
+    "singleQuote": false
+  }
+}
