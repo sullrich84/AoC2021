@@ -21,12 +21,12 @@ console.clear()
 console.log("🎄 Day 16: Packet Decoder")
 
 const runPart1 = true
-const runPart2 = false
+const runPart2 = true
 const runBoth = true
 
 /// Part 1
 
-function parse(data: string, lvl = 0): [] {
+function parse(data: string, lvl = 0): [number, string[], number] {
   const bin = data.split("")
 
   // Helper methods
@@ -39,6 +39,9 @@ function parse(data: string, lvl = 0): [] {
   const type = toInt(readBits(3))
   let versionSum = version
 
+  let lit!: number
+  const literals: number[] = []
+
   if (type === 4) {
     // Read literal
     let [val, end] = ["", false]
@@ -46,7 +49,7 @@ function parse(data: string, lvl = 0): [] {
       end = readBits(1) === "0"
       val += readBits(4)
     }
-    console.log(idnt, "ver:", version, "type:", type, "lit:", toInt(val))
+    lit = toInt(val)
   } else {
     // Read operator
     const lenType = toInt(readBits(1))
@@ -54,35 +57,45 @@ function parse(data: string, lvl = 0): [] {
     if (lenType === 0) {
       const len = toInt(readBits(15))
       let payload = readBits(len)
-      console.log(idnt, "ver:", version, "type:", type, "op0", `${len} bits`)
 
       while (payload.length > 0) {
-        const [rVerSum, rBin] = parse(payload, lvl + 1)
+        const [rVerSum, rBin, rLit] = parse(payload, lvl + 1)
+        rLit != undefined && literals.push(rLit)
         payload = rBin.join("")
         versionSum += rVerSum
       }
     } else {
       const len = toInt(readBits(11))
       let payload = bin.join("")
-      console.log(idnt, "ver:", version, "type:", type, "op1", `${len} packets`)
 
       for (let i = 0; i < len; i++) {
-        const [rVerSum, rBin] = parse(payload, lvl + 1)
+        const [rVerSum, rBin, rLit] = parse(payload, lvl + 1)
         readBits(payload.length - rBin.length)
+        rLit != undefined && literals.push(rLit)
         payload = rBin.join("")
         versionSum += rVerSum
       }
-
-      console.log(idnt, "→ rem-1:", bin.length)
     }
   }
 
-  console.log(idnt, "→ rem:", bin.length)
-  return [versionSum, bin]
+  if (type != 4) lit = evaluate(type, literals)
+  return [versionSum, bin, lit]
+}
+
+function evaluate(type: number, literals: number[]): number {
+  if (type === 0) return literals.reduce((p, c) => p + c, 0)
+  if (type === 1) return literals.reduce((p, c) => p * c, 1)
+  if (type === 2) return _.min(literals)!
+  if (type === 3) return _.max(literals)!
+
+  if (type === 5) return literals[0] > literals[1] ? 1 : 0
+  if (type === 6) return literals[0] < literals[1] ? 1 : 0
+  if (type === 7) return literals[0] === literals[1] ? 1 : 0
+
+  throw "invalid type: " + type
 }
 
 const solve1 = (data: Puzzle) => {
-  console.log()
   return parse(data)[0]
 }
 
@@ -96,6 +109,7 @@ console.log("Task:\t", solve1Task)
 /// Part 2
 
 const solve2 = (data: Puzzle) => {
+  return parse(data)[2]
 }
 
 const solve2Sample = runPart2 ? solve2(sample) : "skipped"
