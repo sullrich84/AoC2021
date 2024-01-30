@@ -8,6 +8,7 @@ const [task, sample] = read("day16")
   .map((file) => file.split("\n").slice(0, -1))
   .map((file) => file.map((l) => parseInt(l, 16)))
   .map((file) => file.map((l) => l.toString(2)))
+  .map((file) => file.map((l) => _.padStart(l, l.length + l.length % 4, "0")))
   .flat()
 
 console.clear()
@@ -19,44 +20,68 @@ const runBoth = false
 
 /// Part 1
 
-const solve1 = (data: Puzzle) => {
+function parse(data: string) {
   const bin = data.split("")
-  let versionSum = 0
 
   const readBits = (size: number) => bin.splice(0, size).join("")
   const prevBits = (size?: number) => bin.join("").slice(0, size || bin.length)
   const cutApdx = () => readBits(bin.length % 4)
   const toInt = (value: string) => parseInt(value, 2)
 
-  function parse(bin: string[]) {
-    const version = toInt(readBits(3))
-    const type = toInt(readBits(3))
-    versionSum += version
+  const version = toInt(readBits(3))
+  const type = toInt(readBits(3))
+  const subPackets = []
 
-    if (type === 4) {
-      let [val, end] = ["", false]
+  console.log("VER: %c%s", "color: yellow", version)
+  console.log("TYP: %c%s", "color: red", type)
+
+  if (type === 4) {
+    let [val, end] = ["", false]
+    while (!end) {
+      end = readBits(1) === "0"
+      val += readBits(4)
+    }
+    console.log("LIT: %c%s", "color: lime", toInt(val))
+    // console.log("APX: %c%s", "color: gray", cutApdx() || "/")
+  } else {
+    const lenType = readBits(1)
+    if (lenType == "0") {
+      const len = toInt(readBits(15))
+      console.log("OPS: %c%s", "color: purple", len)
+      const payload = readBits(len)
+      let [apdx, end] = [payload, false]
       while (!end) {
-        end = readBits(1) === "0"
-        val += readBits(4)
+        const res = parse(apdx)
+        subPackets.push(res)
+        apdx = res.apdx
+        end = apdx === ""
       }
-      console.log("LIT: %c%s", "color: lime", toInt(val))
-      console.log("APX: %c%s", "color: gray", cutApdx())
     } else {
-      const lenType = readBits(1)
-      if (lenType == "0") {
-        const len = toInt(readBits(15))
-        const subOps = readBits(len)
-        versionSum += solve1(subOps)
-        console.log("OPS: %c%s", "color: purple", len)
-      } else {
-        const len = toInt(readBits(11))
-        console.log("OPS: %c%s", "color: cyan", len)
+      const len = toInt(readBits(11))
+      console.log("OPS: %c%s", "color: cyan", len)
+      let apdx = prevBits()
+      for (let i = 0; i < len; i++) {
+        const res = parse(apdx)
+        subPackets.push(res)
+        apdx = res.apdx
       }
     }
   }
 
-  while (bin.length > 0) {
-    parse(bin)
+  return { version, type, subPackets, subPackets, apdx: prevBits() }
+}
+
+const solve1 = (data: Puzzle) => {
+  data = "001010100000000001101010000000000000000000000000000000"
+  console.log(data)
+  let versionSum = 0
+  const stack = [parse(data)]
+
+  while (stack.length > 0) {
+    const res = stack.shift()
+    console.log(res)
+    versionSum += res.version
+    stack.push(...res.subPackets)
   }
 
   return versionSum
