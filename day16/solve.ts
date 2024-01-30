@@ -1,5 +1,5 @@
 // @deno-types="npm:@types/lodash"
-import _, { isPlainObject } from "npm:lodash"
+import _ from "npm:lodash"
 import { read } from "../utils/Reader.ts"
 
 type Puzzle = string
@@ -26,13 +26,12 @@ const runBoth = true
 
 /// Part 1
 
-function parse(data: string, lvl = 0): [number, string[], number] {
+function parse(data: string): [number, string[], number] {
   const bin = data.split("")
 
   // Helper methods
   const readBits = (size: number) => bin.splice(0, size).join("")
   const toInt = (value: string) => parseInt(value, 2)
-  const idnt = Array(lvl).fill("  ").join("")
 
   // Read packet header
   const version = toInt(readBits(3))
@@ -43,7 +42,6 @@ function parse(data: string, lvl = 0): [number, string[], number] {
   const literals: number[] = []
 
   if (type === 4) {
-    // Read literal
     let [val, end] = ["", false]
     while (!end) {
       end = readBits(1) === "0"
@@ -51,7 +49,6 @@ function parse(data: string, lvl = 0): [number, string[], number] {
     }
     lit = toInt(val)
   } else {
-    // Read operator
     const lenType = toInt(readBits(1))
 
     if (lenType === 0) {
@@ -59,7 +56,7 @@ function parse(data: string, lvl = 0): [number, string[], number] {
       let payload = readBits(len)
 
       while (payload.length > 0) {
-        const [rVerSum, rBin, rLit] = parse(payload, lvl + 1)
+        const [rVerSum, rBin, rLit] = parse(payload)
         rLit != undefined && literals.push(rLit)
         payload = rBin.join("")
         versionSum += rVerSum
@@ -69,7 +66,7 @@ function parse(data: string, lvl = 0): [number, string[], number] {
       let payload = bin.join("")
 
       for (let i = 0; i < len; i++) {
-        const [rVerSum, rBin, rLit] = parse(payload, lvl + 1)
+        const [rVerSum, rBin, rLit] = parse(payload)
         readBits(payload.length - rBin.length)
         rLit != undefined && literals.push(rLit)
         payload = rBin.join("")
