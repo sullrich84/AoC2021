@@ -26,12 +26,13 @@ const runBoth = true
 
 /// Part 1
 
-function parse(data: string) {
+function parse(data: string, lvl = 0): [] {
   const bin = data.split("")
 
   // Helper methods
   const readBits = (size: number) => bin.splice(0, size).join("")
   const toInt = (value: string) => parseInt(value, 2)
+  const idnt = Array(lvl).fill("  ").join("")
 
   // Read packet header
   const version = toInt(readBits(3))
@@ -45,7 +46,7 @@ function parse(data: string) {
       end = readBits(1) === "0"
       val += readBits(4)
     }
-    console.log("ver:", version, "type:", type, "lit:", toInt(val))
+    console.log(idnt, "ver:", version, "type:", type, "lit:", toInt(val))
   } else {
     // Read operator
     const lenType = toInt(readBits(1))
@@ -53,30 +54,36 @@ function parse(data: string) {
     if (lenType === 0) {
       const len = toInt(readBits(15))
       let payload = readBits(len)
-      console.log("ver:", version, "type:", type, "op0", `${len} bits`)
+      console.log(idnt, "ver:", version, "type:", type, "op0", `${len} bits`)
+
       while (payload.length > 0) {
-        const [rVerSum, rBin] = parse(payload)
+        const [rVerSum, rBin] = parse(payload, lvl + 1)
         payload = rBin.join("")
         versionSum += rVerSum
       }
     } else {
       const len = toInt(readBits(11))
-      let payload = readBits(bin.length)
-      console.log("ver:", version, "type:", type, "op1", `${len} packets`)
+      let payload = bin.join("")
+      console.log(idnt, "ver:", version, "type:", type, "op1", `${len} packets`)
+
       for (let i = 0; i < len; i++) {
-        const [rVerSum, rBin] = parse(payload)
+        const [rVerSum, rBin] = parse(payload, lvl + 1)
+        readBits(payload.length - rBin.length)
         payload = rBin.join("")
         versionSum += rVerSum
       }
+
+      console.log(idnt, "→ rem-1:", bin.length)
     }
   }
 
+  console.log(idnt, "→ rem:", bin.length)
   return [versionSum, bin]
 }
 
 const solve1 = (data: Puzzle) => {
   console.log()
-  return parse(data)
+  return parse(data)[0]
 }
 
 const solve1Sample = runPart1 ? solve1(sample) : "skipped"
