@@ -1,5 +1,5 @@
 // @deno-types="npm:@types/lodash"
-import _ from "npm:lodash"
+import _, { isPlainObject } from "npm:lodash"
 import { read } from "../utils/Reader.ts"
 
 type Puzzle = string
@@ -29,61 +29,54 @@ const runBoth = true
 function parse(data: string) {
   const bin = data.split("")
 
+  // Helper methods
   const readBits = (size: number) => bin.splice(0, size).join("")
-  const prevBits = (size?: number) => bin.join("").slice(0, size || bin.length)
-  const cutApdx = () => readBits(bin.length % 4)
   const toInt = (value: string) => parseInt(value, 2)
 
+  // Read packet header
   const version = toInt(readBits(3))
   const type = toInt(readBits(3))
-  const subPackets = []
-  const payload = prevBits()
+  let versionSum = version
 
   if (type === 4) {
+    // Read literal
     let [val, end] = ["", false]
     while (!end) {
       end = readBits(1) === "0"
       val += readBits(4)
     }
+    console.log("ver:", version, "type:", type, "lit:", toInt(val))
   } else {
-    const lenType = readBits(1)
-    if (lenType == "0") {
-      const len = toInt(readBits(15))
-      const payload = readBits(len)
+    // Read operator
+    const lenType = toInt(readBits(1))
 
-      let [apdx, end] = [payload, false]
-      while (!end) {
-        const res = parse(apdx)
-        subPackets.push(res)
-        apdx = res.apdx
-        end = apdx === ""
+    if (lenType === 0) {
+      const len = toInt(readBits(15))
+      let payload = readBits(len)
+      console.log("ver:", version, "type:", type, "op0", `${len} bits`)
+      while (payload.length > 0) {
+        const [rVerSum, rBin] = parse(payload)
+        payload = rBin.join("")
+        versionSum += rVerSum
       }
     } else {
       const len = toInt(readBits(11))
-      let apdx = prevBits()
+      let payload = readBits(bin.length)
+      console.log("ver:", version, "type:", type, "op1", `${len} packets`)
       for (let i = 0; i < len; i++) {
-        const res = parse(apdx)
-        subPackets.push(res)
-        apdx = res.apdx
+        const [rVerSum, rBin] = parse(payload)
+        payload = rBin.join("")
+        versionSum += rVerSum
       }
     }
   }
 
-  return { version, type, payload, subPackets, subPackets, apdx: prevBits() }
+  return [versionSum, bin]
 }
 
 const solve1 = (data: Puzzle) => {
-  let versionSum = 0
-  const stack = [parse(data)]
-
-  while (stack.length > 0) {
-    const res = stack.shift()
-    versionSum += res.version
-    console.log(res)
-    stack.push(...res.subPackets)
-  }
-
-  return versionSum
+  console.log()
+  return parse(data)
 }
 
 const solve1Sample = runPart1 ? solve1(sample) : "skipped"
