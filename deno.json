@@ -2,7 +2,8 @@
   "tasks": {
     "tmp": "deno run --allow-read --watch tmp/solve.ts",
     "day16": "deno run --allow-read --watch day16/solve.ts",
-    "day18": "deno run --allow-read --watch day18/solve.ts"
+    "day18": "deno run --allow-read --watch day18/solve.ts",
+    "day19": "deno run --allow-read --watch day19/solve.ts"
   },
   "fmt": {
     "semiColons": false,
