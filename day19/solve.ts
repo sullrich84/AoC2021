@@ -28,17 +28,26 @@ const runBoth = false
 
 /// Part 1
 
-function hashBeacons(scanner: Scanner) {
-  let [xs, ys, zs] = [0, 0, 0]
-    
-  return [xs, ys, zs]
-}
+function hashBeacons({ beacons }: Scanner) {
+  const hashes = {}
 
-function hash([x, y, z]) {
-  const a = Math.abs(x - y)
-  const b = Math.abs(y - z)
-  const c = Math.abs(z - x)
-  return [a, b, c].sort((l, r) => l - r)
+  for (const [a, [ax, ay, az]] of beacons.entries()) {
+    for (const [b, [bx, by, bz]] of beacons.entries()) {
+      if (a == b) continue
+      const dx = Math.abs(ax - bx)
+      const dy = Math.abs(ay - by)
+      const dz = Math.abs(az - bz)
+      const hash = [dx, dy, dz]
+        .sort((l, r) => l - r)
+        .map((v) => v.toString(36))
+        .join(":")
+
+      if (hashes[hash] != undefined) continue
+      hashes[hash] = [a, b]
+    }
+  }
+
+  return hashes
 }
 
 function rot([x, y, z]) {
@@ -71,10 +80,15 @@ function rot([x, y, z]) {
 }
 
 const solve1 = (data: Puzzle) => {
+  const unique = [] 
+
   for (const [aid, a] of data.entries()) {
+    const aHashes = hashBeacons(a)
     for (const [bid, b] of data.entries()) {
       if (aid == bid) continue
-      console.log("Comparing scanner", aid, "and", bid)
+      const bHashes = hashBeacons(b)
+      const len = _.intersection(_.keys(aHashes), _.keys(bHashes)).length
+      console.log({ aid, bid, len } )
     }
   }
 
