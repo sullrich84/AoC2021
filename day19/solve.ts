@@ -14,8 +14,7 @@ const [task, sample] = read("day19")
       const beacons = _.tail(lines)
         .filter((r) => r !== "")
         .map((r) => r.split(",").map((n) => parseInt(n)))
-
-      return { scanner, beacons }
+      return [scanner, beacons]
     })
   )
 
@@ -31,19 +30,19 @@ const runBoth = false
 function hashBeacons({ beacons }: Scanner) {
   const hashes = {}
 
-  for (const [a, [ax, ay, az]] of beacons.entries()) {
-    for (const [b, [bx, by, bz]] of beacons.entries()) {
+  for (const [a, [ax, ay, az, aid]] of beacons.entries()) {
+    for (const [b, [bx, by, bz, bid]] of beacons.entries()) {
       if (a == b) continue
       const dx = Math.abs(ax - bx)
       const dy = Math.abs(ay - by)
       const dz = Math.abs(az - bz)
       const hash = [dx, dy, dz]
         .sort((l, r) => l - r)
-        .map((v) => v.toString(36))
-        .join(":")
+        // .map((v) => v.toString(36))
+        .join("-")
 
-      if (hashes[hash] != undefined) continue
-      hashes[hash] = [a, b]
+      const prev = hashes[hash] || []
+      hashes[hash] = _.uniq([aid, bid, ...prev])
     }
   }
 
@@ -79,20 +78,24 @@ function rot([x, y, z]) {
   ]
 }
 
-const solve1 = (data: Puzzle) => {
-  const unique = [] 
+function buildScanners(data: Puzzle) {
+  const scanners = {}
 
-  for (const [aid, a] of data.entries()) {
-    const aHashes = hashBeacons(a)
-    for (const [bid, b] of data.entries()) {
-      if (aid == bid) continue
-      const bHashes = hashBeacons(b)
-      const len = _.intersection(_.keys(aHashes), _.keys(bHashes)).length
-      console.log({ aid, bid, len } )
+  for (const [si, bs] of data) {
+    for (const [bi, b] of bs.entries()) {
+      for (const [ri, r] of rot(b).entries()) {
+        _.set(scanners, [`s${si}`, `b${bi}`, `r${ri}`], r)
+      }
     }
   }
 
-  return 0
+  return scanners
+}
+
+const solve1 = (data: Puzzle) => {
+  const scanners = buildScanners(data)
+
+  return scanners
 }
 
 const solve1Sample = runPart1 ? solve1(sample) : "skipped"
