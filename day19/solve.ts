@@ -1,10 +1,12 @@
 // @deno-types="npm:@types/lodash"
-import _ from "npm:lodash"
+import _, { functions } from "npm:lodash"
 import { read } from "../utils/Reader.ts"
 
-type Puzzle = Scanner[]
-type Scanner = { scanner: number; beacons: Coord[] }
-type Coord = [x: number, y: number, z: number]
+type Puzzle = [number, number[]][]
+type Scanner = Record<string, Beacons>
+type Beacons = Record<string, Rotations>
+type Rotations = Record<string, Coordinates>
+type Coordinates = { id: string; x: number; y: number; z: number }
 
 const [task, sample] = read("day19")
   .map((file) => file.split("\n\n"))
@@ -27,29 +29,29 @@ const runBoth = false
 
 /// Part 1
 
-function hashBeacons({ beacons }: Scanner) {
-  const hashes = {}
+function hash(beacons: Beacons) {
+  const hashes = []
 
-  for (const [a, [ax, ay, az, aid]] of beacons.entries()) {
-    for (const [b, [bx, by, bz, bid]] of beacons.entries()) {
-      if (a == b) continue
-      const dx = Math.abs(ax - bx)
-      const dy = Math.abs(ay - by)
-      const dz = Math.abs(az - bz)
-      const hash = [dx, dy, dz]
-        .sort((l, r) => l - r)
-        // .map((v) => v.toString(36))
-        .join("-")
-
-      const prev = hashes[hash] || []
-      hashes[hash] = _.uniq([aid, bid, ...prev])
+  for (const [id, cord] of _.entries(beacons)) {
+    for (const [nId, nCord] of _.entries(beacons)) {
+      if (id == nId) continue
+      const dx = Math.abs(cord.r0.x - nCord.r0.x)
+      const dy = Math.abs(cord.r0.y - nCord.r0.y)
+      const dz = Math.abs(cord.r0.z - nCord.r0.z)
+      hashes.push([dx, dy, dz].sort((l, r) => l - r).join(":"))
     }
   }
 
-  return hashes
+  return _.uniq(hashes)
 }
 
-function rot([x, y, z]) {
+function overlap(a: Beacons, b: Beacons) {
+  const hashA = hash(a)
+  const hashB = hash(b)
+  return _.intersection(hashA, hashB).length >= 66
+}
+
+function rot([x, y, z]: [number, number, number]) {
   return [
     [x, y, z],
     [x, z, -y],
@@ -78,13 +80,15 @@ function rot([x, y, z]) {
   ]
 }
 
-function buildScanners(data: Puzzle) {
+function buildScanners(data: Puzzle): Scanner {
   const scanners = {}
 
   for (const [si, bs] of data) {
     for (const [bi, b] of bs.entries()) {
       for (const [ri, r] of rot(b).entries()) {
-        _.set(scanners, [`s${si}`, `b${bi}`, `r${ri}`], r)
+        const path = [`s${si}`, `b${bi}`, `r${ri}`]
+        const [[x, y, z], id] = [r, path.join("")]
+        _.set(scanners, path, { id, x, y, z })
       }
     }
   }
@@ -92,10 +96,27 @@ function buildScanners(data: Puzzle) {
   return scanners
 }
 
+const coordinates = { "s0": { x: 0, y: 0, z: 0 } }
+
+function getNextCoordinates(root: string, b: Beacons) {
+  const { x, y, z } = coordinates[root]
+
+  return { x, y, z }
+}
+
 const solve1 = (data: Puzzle) => {
   const scanners = buildScanners(data)
 
-  return scanners
+  for (const [s1, b1] of _.entries(scanners)) {
+    for (const [s2, b2] of _.entries(scanners)) {
+      if (s1 == s2) continue
+      console.log(s1, "overlap", s2, overlap(b1, b2))
+    }
+  }
+
+  const s0 = scanners["s0"]
+  const s1 = scanners["s1"]
+  return getNextCoordinates("s0", s1)
 }
 
 const solve1Sample = runPart1 ? solve1(sample) : "skipped"
