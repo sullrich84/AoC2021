@@ -1,12 +1,8 @@
 // @deno-types="npm:@types/lodash"
-import _, { functions } from "npm:lodash"
+import _ from "npm:lodash"
 import { read } from "../utils/Reader.ts"
 
-type Puzzle = [number, number[]][]
-type Scanner = Record<string, Beacons>
-type Beacons = Record<string, Rotations>
-type Rotations = Record<string, Coordinates>
-type Coordinates = { id: string; x: number; y: number; z: number }
+type Puzzle = [number, [number, number, number][]][]
 
 const [task, sample] = read("day19")
   .map((file) => file.split("\n\n"))
@@ -29,29 +25,28 @@ const runBoth = false
 
 /// Part 1
 
-function hash(beacons: Beacons) {
-  const hashes = []
+function hash(beacons: [number, number, number][]) {
+  const hashes = {}
 
-  for (const [id, cord] of _.entries(beacons)) {
-    for (const [nId, nCord] of _.entries(beacons)) {
-      if (id == nId) continue
-      const dx = Math.abs(cord.r0.x - nCord.r0.x)
-      const dy = Math.abs(cord.r0.y - nCord.r0.y)
-      const dz = Math.abs(cord.r0.z - nCord.r0.z)
-      hashes.push([dx, dy, dz].sort((l, r) => l - r).join(":"))
+  for (let i = 0; i < beacons.length; i++) {
+    for (let ii = 0; ii < beacons.length; ii++) {
+      if (i == ii) continue
+      const [ax, ay, az] = beacons[i]
+      const [bx, by, bz] = beacons[ii]
+
+      const dx = Math.abs(ax - bx)
+      const dy = Math.abs(ay - by)
+      const dz = Math.abs(az - bz)
+
+      const hash = [dx, dy, dz].sort((a, b) => a - b).join(":")
+      hashes[hash] = [i, ii]
     }
   }
 
-  return _.uniq(hashes)
+  return hashes
 }
 
-function overlap(a: Beacons, b: Beacons) {
-  const hashA = hash(a)
-  const hashB = hash(b)
-  return _.intersection(hashA, hashB).length >= 66
-}
-
-function rot([x, y, z]: [number, number, number]) {
+function rot([x, y, z]: [number, number, number]): [number, number, number][] {
   return [
     [x, y, z],
     [x, z, -y],
@@ -80,43 +75,35 @@ function rot([x, y, z]: [number, number, number]) {
   ]
 }
 
-function buildScanners(data: Puzzle): Scanner {
-  const scanners = {}
+const solve1 = (data: Puzzle) => {
+  const duplicates = []
+  const all = data.map(([s, b]) => b.map((_v, i) => ["s", s, "b", i].join(""))).flat()
 
-  for (const [si, bs] of data) {
-    for (const [bi, b] of bs.entries()) {
-      for (const [ri, r] of rot(b).entries()) {
-        const path = [`s${si}`, `b${bi}`, `r${ri}`]
-        const [[x, y, z], id] = [r, path.join("")]
-        _.set(scanners, path, { id, x, y, z })
+  for (const [scnr, bcns] of data) {
+    const hashes = hash(bcns)
+    const hashKeys = _.keys(hashes)
+
+    for (const [nscnr, nbcns] of data) {
+      if (scnr == nscnr) continue
+
+      const nhashes = hash(nbcns)
+      const nHashKeys = _.keys(nhashes)
+
+      const intersection = _.intersection(hashKeys, nHashKeys)
+      if (intersection.length < 66) continue
+
+      for (const key of [...hashKeys, ...nHashKeys]) {
+        if (_.includes(intersection, key)) {
+          duplicates.push(["s", scnr, "b", hashes[key][0]].join(""))
+          duplicates.push(["s", nscnr, "b", hashes[key][0]].join(""))
+          duplicates.push(["s", scnr, "b", hashes[key][1]].join(""))
+          duplicates.push(["s", nscnr, "b", hashes[key][1]].join(""))
+        }
       }
     }
   }
 
-  return scanners
-}
-
-const coordinates = { "s0": { x: 0, y: 0, z: 0 } }
-
-function getNextCoordinates(root: string, b: Beacons) {
-  const { x, y, z } = coordinates[root]
-
-  return { x, y, z }
-}
-
-const solve1 = (data: Puzzle) => {
-  const scanners = buildScanners(data)
-
-  for (const [s1, b1] of _.entries(scanners)) {
-    for (const [s2, b2] of _.entries(scanners)) {
-      if (s1 == s2) continue
-      console.log(s1, "overlap", s2, overlap(b1, b2))
-    }
-  }
-
-  const s0 = scanners["s0"]
-  const s1 = scanners["s1"]
-  return getNextCoordinates("s0", s1)
+  return _.uniq(duplicates).length
 }
 
 const solve1Sample = runPart1 ? solve1(sample) : "skipped"
