@@ -94,6 +94,7 @@ const solve1 = (data: Puzzle) => {
 
       for (const key of [...hashKeys, ...nHashKeys]) {
         if (_.includes(intersection, key)) {
+
           duplicates.push(["s", scnr, "b", hashes[key][0]].join(""))
           duplicates.push(["s", nscnr, "b", hashes[key][0]].join(""))
           duplicates.push(["s", scnr, "b", hashes[key][1]].join(""))
