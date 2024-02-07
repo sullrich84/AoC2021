@@ -1,3 +1,5 @@
+import { colorize } from "https://deno.land/x/json_colorize/mod.ts"
+
 export function debug(payload: any, pretty = false): void {
   colorize(payload, { pretty })
 }
