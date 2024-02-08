@@ -39,7 +39,7 @@ function hash(s: number, beacons: [number, number, number][]) {
       const dz = Math.abs(az - bz)
 
       const hash = [dx, dy, dz].sort((a, b) => a - b).join(":")
-      hashes[hash] = [i, ii].map((n) => "s" + s + "b" + n)
+      hashes[hash] = [i, ii].sort((a, b) => b - a).map((n) => "s" + s + "b" + n)
     }
   }
 
@@ -77,7 +77,7 @@ function rot([x, y, z]: [number, number, number]): [number, number, number][] {
 
 const solve1 = (data: Puzzle) => {
   const size = data.map(([_s, b]) => b.length)
-  const pairs = []
+  const map = {}
 
   for (const [redScanner, redBeacons] of data) {
     const redHashes = hash(redScanner, redBeacons)
@@ -85,18 +85,31 @@ const solve1 = (data: Puzzle) => {
     for (const [blueScanner, blueBeacons] of data) {
       if (redScanner == blueScanner) continue
       const blueHashes = hash(blueScanner, blueBeacons)
-   
+
       const redKeys = _.keys(redHashes)
       const blueKeys = _.keys(blueHashes)
 
       const intersections = _.intersection(redKeys, blueKeys)
       if (intersections.length < 66) continue
 
-      console.log(`scanner ${redScanner} overlaps with scanner ${blueScanner}`)
+      const pairs = intersections
+        .map((k) => _.zip(redHashes[k], blueHashes[k]))
+        .flat()
+
+      for (const pair of pairs) {
+        const [left, right] = pair
+        if (map[left] == undefined) map[left] = []
+        map[left].push(right)
+      }
+
+      console.log(
+        `scanner ${redScanner} overlaps with scanner ${blueScanner}`,
+        pairs,
+      )
     }
   }
 
-  return _.sum(size)
+  return _.keys(map).length
 }
 
 const solve1Sample = runPart1 ? solve1(sample) : "skipped"
