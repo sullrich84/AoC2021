@@ -1,5 +1,5 @@
 // @deno-types="npm:@types/lodash"
-import _ from "npm:lodash"
+import _, { intersection } from "npm:lodash"
 import { read } from "../utils/Reader.ts"
 
 type Puzzle = [number, [number, number, number][]][]
@@ -77,7 +77,7 @@ function rot([x, y, z]: [number, number, number]): [number, number, number][] {
 
 const solve1 = (data: Puzzle) => {
   const size = data.map(([_s, b]) => b.length)
-  const map = {}
+  const dups: Set<number>[] = []
 
   for (const [redScanner, redBeacons] of data) {
     const redHashes = hash(redScanner, redBeacons)
@@ -96,20 +96,28 @@ const solve1 = (data: Puzzle) => {
         .map((k) => _.zip(redHashes[k], blueHashes[k]))
         .flat()
 
-      for (const pair of pairs) {
-        const [left, right] = pair
-        if (map[left] == undefined) map[left] = []
-        map[left].push(right)
+      insert: for (const [left, right] of pairs) {
+        for (const dup of dups) {
+          if (dup.has(left) || dup.has(right)) {
+            dup.add(left)
+            dup.add(right)
+            continue insert
+          }
+        }
+        // Create new dup
+        dups.push(new Set([left, right]))
       }
 
       console.log(
-        `scanner ${redScanner} overlaps with scanner ${blueScanner}`,
+        `scanner ${redScanner}`,
+        `overlaps with`,
+        `scanner ${blueScanner}`,
         pairs,
       )
     }
   }
 
-  return _.keys(map).length
+  return _.sum(size) - dups.length * 2
 }
 
 const solve1Sample = runPart1 ? solve1(sample) : "skipped"
